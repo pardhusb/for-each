@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="5f6ae8c4-f6de-426b-8ab0-f3de04a07bd2" >
+		<http:listener-connection host="${http.host}" port="${http.port}" />
+	</http:listener-config>
+	<db:config name="Database_Config" doc:name="Database Config" doc:id="5c2101d6-0b94-44bb-bc91-67ead9fa641a" >
+		<db:my-sql-connection host="${db.host}" port="${db.port}" user="${db.user}" password="${db.password}" database="${db.database}" />
+	</db:config>
+	<configuration-properties doc:name="Configuration properties" doc:id="c4952c59-0e58-4bf3-bc80-7129fbd11685" file="dev.yaml" />
+	<flow name="for-eachFlow" doc:id="c0c110fc-d9cc-427b-a7e6-bf367b09e8f8" >
+		<http:listener doc:name="Listener" doc:id="5d03af1c-2424-4f26-ae11-08e8257641ea" config-ref="HTTP_Listener_config" path="/foreach"/>
+		<foreach doc:name="For Each" doc:id="21ecfcb5-f8a9-46d6-a6c2-812d8c21bf96" >
+			<logger level="INFO" doc:name="Logger" doc:id="ed7fe5e5-0dc9-4f44-a482-4f4bc5f80ba9" message="#[payload]" />
+			<db:insert doc:name="Insert" doc:id="b52f0447-97d3-4764-a139-fa564429ec15" config-ref="Database_Config">
+			<db:sql><![CDATA[insert into customer_management (name, adress, email, phone)
+values (:name, :adress, :email, :phone)]]></db:sql>
+			<db:input-parameters><![CDATA[#[{
+	name : payload.name,
+	adress : payload.adress,
+	email : payload.email,
+	phone : payload.phone
+}]]]></db:input-parameters>
+		</db:insert>
+			<logger level="INFO" doc:name="Logger" doc:id="c1455943-3db0-4653-8867-aafb3b342d58" message="after db insertion"/>
+		</foreach>
+		<ee:transform doc:name="Transform Message" doc:id="61d1f7a4-cac3-48ee-89cc-742af7d040e6" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="for-eachFlow1" doc:id="ea581267-f0be-4b47-b551-b25f0a4c5448">
+		<http:listener doc:name="Listener" doc:id="1910b126-5c73-42f9-a328-257587699ad7" config-ref="HTTP_Listener_config" path="/foreach2" />
+		<logger level="INFO" doc:name="Logger" doc:id="82d7ec54-b716-45dd-a7fc-88f2347725b7" />
+		<db:select doc:name="Select" doc:id="7e9f1592-1c27-4ad1-87fd-274348d986e5" config-ref="Database_Config">
+			<db:sql><![CDATA[select * from customer_management]]></db:sql>
+		</db:select>
+		<foreach doc:name="For Each" doc:id="b7c3b1ae-dcca-4a9f-868f-ca9de7f624ef" collection="#[payload]">
+			<logger level="INFO" doc:name="Logger" doc:id="0df2c3df-5a6b-4d14-b566-8453febca9e3" message="foreach-- #[payload]" />
+		</foreach>
+		<ee:transform doc:name="Transform Message" doc:id="03df630e-4095-4b15-9d6e-992f443e8f63">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+</mule>
